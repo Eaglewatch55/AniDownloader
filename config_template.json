@@ -1,0 +1,13 @@
+{
+    "save_path": {
+        "1": {
+            "alias": "Shows",
+            "directory": "/portainer/Shows"
+        }
+    },
+    "jdownloader": {
+        "mail": "mail@gmail.com",
+        "pass": "pass",
+        "device_name": "device_name"
+    }
+}
