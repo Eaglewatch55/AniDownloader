@@ -1,1 +1,39 @@
-{"_default": {"1": {"show": "Boruto", "current_episode": 292, "list_url": "https://www3.animeflv.net/anime/boruto-naruto-next-generations-tv", "folder_name": "Boruto Naruto Next Generation (2021)", "status": "Broadcasting"}, "2": {"show": "One Piece", "current_episode": 1054, "list_url": "https://www3.animeflv.net/anime/one-piece-tv", "folder_name": "One Piece (1999)", "status": "Broadcasting"}, "3": {"show": "Bleach SK", "current_episode": 13, "list_url": "https://www3.animeflv.net/anime/bleach-sennen-kessenhen", "folder_name": "Bleach Sennen Kessenhen (2022)", "status": "Finished"}, "4": {"show": "Slime", "current_episode": 1, "list_url": "https://www3.animeflv.net/anime/tensei-shitara-slime-datta-ken", "folder_name": "Slime Folder", "status": false}}}
+{
+    "_default": {
+        "1": {
+            "show": "Boruto",
+            "current_episode": 292,
+            "list_url": "https://www3.animeflv.net/anime/boruto-naruto-next-generations-tv",
+            "folder_name": "Boruto Naruto Next Generation (2021)",
+            "broadcasting": false
+        },
+        "2": {
+            "show": "One Piece",
+            "current_episode": 1060,
+            "list_url": "https://www3.animeflv.net/anime/one-piece-tv",
+            "folder_name": "One Piece (1999)",
+            "broadcasting": true
+        },
+        "3": {
+            "show": "Bleach SK",
+            "current_episode": 13,
+            "list_url": "https://www3.animeflv.net/anime/bleach-sennen-kessenhen",
+            "folder_name": "Bleach Sennen Kessenhen (2022)",
+            "broadcasting": false
+        },
+        "4": {
+            "show": "Slime",
+            "current_episode": 1,
+            "list_url": "https://www3.animeflv.net/anime/tensei-shitara-slime-datta-ken",
+            "folder_name": "Tensei shitara Slime Datta Ken (2018)",
+            "broadcasting": false
+        },
+        "5": {
+            "show": "Steins Gate",
+            "current_episode": 24,
+            "list_url": "https://www3.animeflv.net/anime/steinsgate",
+            "folder_name": "Steins Gate (2011)",
+            "broadcasting": false
+        }
+    }
+}

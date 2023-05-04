@@ -1,7 +1,9 @@
 from custom_library.db_query import Jd_config
+from custom_library.db_query import Show
 from requests_html import HTMLSession
 from bs4 import BeautifulSoup
 import myjdapi
+from pathlib import PosixPath
 from time import sleep
 
 #* WEB PAGE SCRAPPER        
@@ -21,6 +23,9 @@ class Scrap():
         self.link = url
         self.retrys = attempts
         
+    def __str__(self) -> str:
+        return f"URL: {self.get_url()}\n"
+    
     def get_url(self):
         return self.link
     
@@ -47,12 +52,33 @@ class Scrap():
                 if i == self.get_attempts():
                     raise ConnectionError("Connection Failed")
 
-                
+#! REVISAR 
 class Episode_page(Scrap):
-    def __init__(self, url: str, timeout: int = 5000, attempts: int = 3) -> None:
-        super().__init__(url, timeout, attempts)
+    def __init__(self, show: Show, timeout: int = 5000, attempts: int = 3) -> None:
+        super().__init__(show.get_list_url(), timeout, attempts)
+        self.name = show.get_alias()
+        self.next_ep = show.get_episode() + 1
+        self.ep_link = self.get_url().replace("/anime/","/ver/")+ "-" + str(show.get_episode() + 1)
+        self.list_downloads = self.scrap_links()
+        self.broadcast_status = self.get_emision_status()
         
-    def get_links(self) -> list:
+    def __str__(self) -> str:
+        return (super().__str__() + 
+                f"Status: {self.get_emision_status()}\nEpisode link: {self.get_episode_link()}\nDownload links: {self.get_download_links()}")
+    
+    def get_alias(self):
+        return self.name
+    
+    def get_episode_num(self):
+        return self.next_ep
+    
+    def get_episode_link(self):
+        return self.ep_link
+    
+    def get_download_links(self):
+        return self.list_downloads
+        
+    def scrap_links(self) -> list:
         """
         Parameters:
         ----------
@@ -69,7 +95,7 @@ class Episode_page(Scrap):
         for i in range(self.get_attempts()):
             try:
                 with HTMLSession() as session:
-                    r = session.get(self.get_url(), timeout = self.get_timeout())
+                    r = session.get(self.get_episode_link(), timeout = self.get_timeout())
                     #Busca tabla de descargas
                     download_table = r.html.find("#DwsldCn",first = True)
                     # El .links regresa variable tipo "set"
@@ -79,8 +105,8 @@ class Episode_page(Scrap):
                     raise ConnectionError("Connection Failed")
         return []
     
-    
-    def on_emision_status(self, list_url : str):
+    #! REVISAR
+    def get_emision_status(self):
         """
         Parameters:
         ----------
@@ -96,10 +122,10 @@ class Episode_page(Scrap):
         for i in range(self.get_attempts()):
             try:
                 with HTMLSession() as session:
-                    r = session.get(list_url, timeout=self.get_timeout())
+                    r = session.get(self.get_url(), timeout=self.get_timeout())
                     r.html.render()
                     soup = BeautifulSoup(r.content, "lxml")
-                    text = soup.find(class_="fa-tv").get_text()
+                    text = soup.find(class_="AnmStts").get_text()
                     
                     if text == "En emision":
                         return True
@@ -108,48 +134,51 @@ class Episode_page(Scrap):
             except:
                 if i == self.get_attempts():
                     raise ConnectionError("Connection Failed")
+        
          
 #* JDOWNLOAD MANAGMENT    
-class Episode_links():
-    def __init__(self, episode_name: str, show_path: str) -> None:
-        self.ep_links = []
-        self.ep_name = episode_name
-        self.ep_path = show_path
-        
-    
-    def __str__(self) -> str:
-        return (f"URL: {self.get_urls()}\n"
-                f"EP_NAME: {self.get_episode_name()}\n"
-                f"PATH: {self.get_show_path()}")
-    
-    def add_url(self, url: str):
-        self.ep_links.append(url)
-    
-    def get_urls(self):
-        return self.ep_links
-
-    def get_episode_name(self):
-        return self.ep_name
-    
-    def get_show_path(self):
-        return self.ep_path
-
-
 class Jd_manager():
     def __init__(self, attempt_number = 3) -> None:
         self.config = Jd_config()
         self.links = []
         self.attempts = attempt_number
+        
+        self.jd = myjdapi.Myjdapi()
+        self.jd.set_app_key("my_key")  
+        
+        if self.attempt(self.jd.connect,"Connecting to JDownloader API", self.config.get_mail(), self.config.get_pass()):
+            self.device = self.jd.get_device(self.config.get_device_name())
+        else:
+            raise ConnectionError("Connection not available")
+        
+        # STARTUP CLEANING SEQUENCE
+        self.attempt(self.clear_downloads, "Startup cleanning sequence")
     
     def __str__(self) -> str:
         to_print = ""
         for episode in self.get_links():
             to_print += "-----------------------------\n"
-            to_print += episode.__str__() + "\n"
+            
+            for link in episode.get_download_links():
+                to_print += " - " + link + "\n"
+            
         return to_print
 
+    def disconnect(self):
+        self.jd.disconnect()
+    
+    def reconnect(self):
+        self.jd = myjdapi.Myjdapi()
+        self.jd.set_app_key("my_key")  
+        
+        if self.attempt(self.jd.connect,"Connecting to JDownloader API", self.config.get_mail(), self.config.get_pass()):
+            self.device = self.jd.get_device(self.config.get_device_name())
+        else:
+            raise ConnectionError("Connection not available")                
+        
     def get_attempt_number(self):
         return self.attempts
+    
     
     def attempt(self, main_func, message: str, *args, except_func = False, **kwargs):
         """
@@ -173,35 +202,42 @@ class Jd_manager():
         for i in range(self.get_attempt_number()):
             try:
                 to_return = main_func(*args)
+                sleep(1)
                 return to_return
             except:
                 if except_func is not False:
                     self.attempt(except_func, "Exception handling", kwargs.values())
                     sleep(1)
                 print(f"Attempt {i + 1} failed")
-                pass
         return False
     
-    def add_links(self, episode: Episode_links) -> None:
+    
+    def add_links(self, episode: Episode_page) -> None:
         self.links.append(episode)
     
-    def get_links(self) -> Episode_links:
+    
+    def get_links(self) -> list[Episode_page]:
         return self.links
     
-    def get_download_links(self, device) -> list:
-        downloads = myjdapi.myjdapi.Downloads(device)
+    
+    def get_download_links(self) -> list:
+        downloads = myjdapi.myjdapi.Downloads(self.device)            
         return  downloads.query_links()
-        
-    def clear_downloads(self, device, delete_type = "DELETE_FINISHED"):
-        downloads = myjdapi.myjdapi.Downloads(device)
+    
+    
+    def clear_downloads(self, delete_type = "DELETE_FINISHED"):
+        downloads = myjdapi.myjdapi.Downloads(self.device)
         downloads.cleanup(action=delete_type, mode="REMOVE_LINKS_ONLY", selection_type="ALL")
         
-    def clear_link_list(self, device, delete_type = "DELETE_OFFLINE"):
-        linkgrabber = myjdapi.myjdapi.Linkgrabber(device)
+        
+    def clear_link_list(self, delete_type = "DELETE_OFFLINE"):
+        linkgrabber = myjdapi.myjdapi.Linkgrabber(self.device)
         linkgrabber.cleanup(action=delete_type, mode="REMOVE_LINKS_ONLY", selection_type="ALL")
 
-    def add_url(self, link, ep_name, folder, device) -> bool:
-        linkgrab = myjdapi.myjdapi.Linkgrabber(device)
+
+    def add_url(self, link, ep_name, folder) -> bool:
+        linkgrab = myjdapi.myjdapi.Linkgrabber(self.device)
+        
         linkgrab.add_links([{"autostart": False,
                       "links": link,
                       "packageName": ep_name,
@@ -211,7 +247,7 @@ class Jd_manager():
                       "destinationFolder": folder,
                       "overwritePackagizerRules": True
                           }])
-
+        
         grabber_links = linkgrab.query_links()
         
         while len(grabber_links) == 0:
@@ -223,24 +259,24 @@ class Jd_manager():
         if grabber_links[0]["availability"] == "ONLINE":
             
             linkgrab.rename_link(grabber_links[0]["uuid"], f"{ep_name}.mp4")
-            linkgrab.move_to_downloadlist(link_ids = [grabber_links[0]["uuid"]], package_ids = [grabber_links[0]["packageUUID"]]) 
-            return True
+            link_id = grabber_links[0]["uuid"]
+            package_id = grabber_links[0]["packageUUID"]
+            linkgrab.move_to_downloadlist(link_ids = [link_id], package_ids = [package_id]) 
+            return True, link_id, package_id
         
         else:
-            
             print(f"Offline link: {link}")
             while linkgrab.get_package_count() > 0:
                 # sleep(2)
                 linkgrab.remove_links([grabber_links[0]["uuid"]] )
-            return False
+            return False, False, False
 
-    def clear_jd(self, 
-                 device = None,
+
+    def clear_jd(self,
                  cleartype_donwloads = False,
                  cleartype_links = False):
         """
         Clears the Linkcollector and/or the Downloads section of JDownloader.
-        Creates an instance of Myjdapi if no device argument is recieved
         
         Parameters
             device: str
@@ -253,75 +289,115 @@ class Jd_manager():
                 DELETE_ALL, DELETE_DISABLED, DELETE_FAILED, DELETE_FINISHED, DELETE_OFFLINE, DELETE_DUPE, DELETE_MODE
         """
         
-        jd_temp = None
-        if device is None:
-            jd_temp = myjdapi.Myjdapi()
-            jd_temp.set_app_key("EXAMPLE")
-            jd_temp.connect(self.config.get_mail(), self.config.get_pass())
-            device = jd_temp.get_device(self.config.get_device_name())
-        
         if cleartype_donwloads is not False:
-            self.clear_downloads(device, cleartype_donwloads)
+            self.clear_downloads(self.device, cleartype_donwloads)
         
         if cleartype_links is not False:
-            self.clear_link_list(device, cleartype_links)
-        
-        if jd_temp is not None:
-            jd_temp.disconnect()       
+            self.clear_link_list(self.device, cleartype_links)  
       
-    def download_episodes(self):
+      
+    def download_episodes(self, directory_path) -> dict[list]:
         """
         Downloads all the videos from the Episode_links instances saved, checks the 
         status of the links within each instance and adds the first available to JDownloader.
         """
-        # INITIALIZE JDOWNLOADER
-        jd = myjdapi.Myjdapi()
-        jd.set_app_key("EXAMPLE")
-        if self.attempt(jd.connect,"Connecting to JDownloader API", self.config.get_mail(), self.config.get_pass()):
-            device = jd.get_device(self.config.get_device_name())
-            
-            # STARTUP CLEANING SEQUENCE
-            
-            self.attempt(self.clear_downloads, "Startup cleanning sequence", device)
-                    
-            # EPISODE´S DOWNLOAD SEQUENCE
-            for episode in self.get_links():
-                
-                downloaded_flag = False                    
-                print(episode)
-                
-                # CHECKS IF THE FILE IS ALREADY IN JDOWNLOADER´S DOWNLOAD SECTION
-                packages = self.attempt(self.get_download_links, "Checking download packages", device)
-                
-                for package in packages:
-                    if f"{episode.get_episode_name()}.mp4" == package["name"]:
-                        print("Already in downloads")
-                        downloaded_flag = True
-                    break
-                        
-                # EXITS ATTEMPT LOOP IF ALREADY ADDED
-                if downloaded_flag is not True:
-                    
-                    #ADDS AND CHECKS ONLINE STATUS OF EACH LINK AVAILABLE
-                    for url in episode.get_urls():
-                        if self.attempt(self.add_url, 
-                                        f"Adding {episode.get_episode_name()}",
-                                        url, 
-                                        episode.get_episode_name(),
-                                        episode.get_show_path(),
-                                        device,
-                                        except_func=self.clear_jd,
-                                        cleartype_links="DELETE_ALL", 
-                                        device=device):
-                            
-                            print(f"Download added: {url}")
-                            sleep(1)
-                            break   #ADDS ONLY THE FIRST AVAILABLE LINK TO DOWNLOAD
-                        
-                        sleep(1)
-            
-            jd.disconnect()
-            
 
+        episodes_id = {}
         
+        # EPISODE´S DOWNLOAD SEQUENCE
+        for episode in self.get_links():
+            
+            downloaded_flag = False                    
+            # print(episode)
+            
+            # CHECKS IF THE FILE IS ALREADY IN JDOWNLOADER´S DOWNLOAD SECTION
+            packages = self.attempt(self.get_download_links, "Checking download packages")
+            
+            for package in packages:
+                if f"E{episode.get_episode_num()}.mp4" == package["name"]:
+                    print("Already in downloads")
+                    downloaded_flag = True
+                break
+                    
+            # EXITS ATTEMPT LOOP IF ALREADY ADDED
+            if downloaded_flag is not True:
+                
+                #ADDS AND CHECKS ONLINE STATUS OF EACH LINK AVAILABLE
+                for url in episode.get_download_links():
+                    status = False
+                    status, link_id, package_id = self.attempt(self.add_url, 
+                                    f"Adding {episode.get_alias()}",
+                                    url, 
+                                    f"E{episode.get_episode_num()}",
+                                    directory_path,
+                                    except_func=self.clear_jd,
+                                    cleartype_links="DELETE_ALL")
+                    if status:
+                        print(f"Download added: {url}")
+                        episodes_id[episode.get_alias()] = [link_id, episode.get_episode_num(), "Downloading"]
+                        sleep(1)
+                        break   #ADDS ONLY THE FIRST AVAILABLE LINK TO DOWNLOAD
+ 
+                    sleep(1)
         
+        return episodes_id
+        
+    def download_validation(self, episode_dict: dict[list], default_time) -> dict[list]:
+            
+            
+            def get_dict_index(dict_list:dict[list], index:int) -> list:
+                """
+                    Takes a dictionary with a list as value and returns a list 
+                    of the given index of each list
+                """
+                
+                return_list = []
+                for key in dict_list.keys():
+                    return_list.append(dict_list[key][index])
+                return return_list
+            
+                    
+            print(f"Initiating {len(episode_dict)} downloads")
+            episodes_status = get_dict_index(episode_dict, 2)
+            
+            while any([True for i in episodes_status if i == "Downloading"]):
+                # Gets JDownloader´s Donwload tab URLs
+                down_list = self.attempt(self.get_download_links, "Getting download status")
+                max_eta = 0
+                
+                if down_list is False:
+                    self.attempt(self.reconnect, "Attempting to reconnect")
+                    sleep(default_time)
+                    continue
+                
+                for package in down_list:
+                    # Checks each package for status finished
+                    uuid = package.get("uuid")
+                    
+                    # print(uuid)
+                    # print(f"Runing: {package.get('running')}")
+                    # print(f"Status: {package.get('status')}")
+                    
+                    #Creates a tuple with status and name for validation of the current uuid.
+                    for episode in episode_dict.keys():
+                        if episode_dict[episode][0] == uuid:
+                            cond_uuid = (episode, True)
+                            break
+                    
+                    if cond_uuid[1] and package.get("bytesLoaded") == package.get("bytesTotal"):
+                        episode_dict[episode][2] = "Finished"
+                    
+                    # SET WAITING TIME GIVEN THE ESTIMATED TIME OF COMPLETION    
+                    elif package.get('speed') == 0:
+                        print(f"Donwload {uuid} paused")
+                        max_eta = max(default_time, max_eta)
+                    else:
+                        max_eta = max(package.get("eta"), max_eta)
+
+                    episodes_status = get_dict_index(episode_dict, 2)
+                    
+                    if max_eta > 0:
+                        print(f"ETA: {max_eta}")
+                        sleep(max_eta)        
+                        
+            return episode_dict

@@ -1,50 +1,59 @@
 import custom_library.scrap_algorithm as scrap
-from custom_library.db_query import Save_path
-from custom_library.db_query import Updater
-from pathlib import Path
+from custom_library.db_query import Save_path, Updater
 
-#! REVISAR LA FUNCIONALIDAD DE ESTATUS EMISION
 #* SCAN AND DOWNLOAD SCRIPT
-save_path = Save_path("Temp Descargas")
+save_path = Save_path("Shows")
 print(f"Descargando en {save_path.get_alias()}")
+updater = Updater()
+link_dict = {}
+manager = scrap.Jd_manager()
+emiting_shows = updater.all_emiting_shows()
 
-for show in Updater.all_emiting_shows():
+for show in emiting_shows:
     
+    #* ADD EPISODE_LINK INSTANCE
     # GETS THE LATEST EPISODE NUMBER AND CALCULATES THE URL OF IT
-    next_episode = show.get_episode() + 1
-    ep_url = show.get_list_url().replace("/anime/","/ver/")+ "-" + str(next_episode)
+    show.increase_episode()
+    ep_url = show.get_list_url()
     
-    episode_page = scrap.Episode_page(ep_url, 300, 3)
+    episode_page = scrap.Episode_page(show , 300, 3)
     
     # VALIDATES THE WEBPAGE´S NEW EPISODE IS ONLINE
     if not episode_page.ok():
-        print(f"{show.get_alias()} episodio {next_episode} no disponible")
+        print(f"{show.get_alias()} episode {show.get_episode()} not available")
         continue
     
-    print(f"{show.get_alias()} episodio {next_episode} diponible")
+    print(f"{show.get_alias()} episode {show.get_episode()} available")
     
-    episode_save_path = Path(save_path.get_directory() + "/" + show.get_folder())
+    # SET SHOW´S SAVE PATH
+    episode_save_path = f"{save_path.get_directory()}/{show.get_folder()}"
     
-    if not episode_save_path.is_dir():
-        episode_save_path.mkdir()
+    #! UNCOMMENT WHEN PASSED TO LINUX SERVER
+    #* AWARE OF SERVER´S FOLDER AND JDOWNLOADER PATHS
     
-    episode_save_path = Path(str(episode_save_path) + f"/E{next_episode}.mp4")
+    # if not episode_save_path.is_dir():
+    #     episode_save_path.mkdir()
     
-    #! TERMINAR - AÑADIR LO DE TEST
-    # for link in episode_page.get_links():
-        
-    #     try:
-            
-        
-    #     except:
-            
+    
+    # Create each episode_page instance
+    show = updater.get_show(show.get_alias())
+    web_page = scrap.Episode_page(show)
+    
+    # Execute manager.download_episodes()
+    manager.add_links(web_page)
 
-    #     if episode_save_path.is_file():
-    #         print("Download completed")
-    
+# Add to downloads in JDownloader
+episdoes_ids = manager.download_episodes(episode_save_path)
+
+# Wait and validate download
+episodes_ids = manager.download_validation(episdoes_ids, 20)
+
+manager.disconnect()
+
+#* Update show_db
+for show in emiting_shows:
+    print(show.get_alias())
+    if episdoes_ids[show.get_alias()][2] == "Finished":
+        updater.update_chapters(show)
+        print(f"Download of {show.get_alias()} completed")
         
-    
-    
-    
-    
-    

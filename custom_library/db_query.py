@@ -10,16 +10,12 @@ class Save_path():
         data = Query()
         config = save_path_table.search(data.alias == alias)[0]
         self.directory_path = config["directory"]
-        self.location = config["transmission"]
     
     def get_alias(self):
         return self.path_profile
     
     def get_directory(self):
         return self.directory_path
-    
-    def get_transmission(self):
-        return self.location
     
     def __str__(self) -> str:
         return f"Alias: {self.get_alias()}\nDirectory: {self.get_directory()}\nTransmission: {self.get_transmission()}"
@@ -62,20 +58,21 @@ class Show ():
         """
         
         self.name = alias
-        self.base_url = list_url
+        self.episode_list_url = list_url
         self.latest_episode = episode_number
         self.folder_name = folder
         self.on_emission = emission
+        self.download_id = None
         
     
     def __str__(self) -> str:
-        return f"Show: {self.get_alias()}\nList URL: {self.get_list_url()}\nCurrent Episode: {self.get_episode()}\nOn Emision: {self.get_emision_status()}\nFolder Name: {self.get_folder()}"
+        return f"Show: {self.get_alias()}\nList URL: {self.get_list_url()}\nCurrent Episode: {self.get_episode()}\nOn Emision: {self.get_broadcasting()}\nFolder Name: {self.get_folder()}"
     
     def get_alias(self) -> str:
         return self.name
     
     def get_list_url(self) -> str:
-        return self.base_url
+        return self.episode_list_url
     
     def get_episode(self) -> int:
         return self.latest_episode
@@ -83,31 +80,36 @@ class Show ():
     def get_folder(self) -> str:
         return self.folder_name
     
-    def get_emision_status(self) -> str:
+    def get_broadcasting(self) -> str:
         return self.on_emission
+    
+    def get_download_id(self) -> int:
+        return self.download_id
     
     def set_alias(self, alias: str):
         self.name = alias
     
     def set_list_url(self, url: str):
-        self.base_url = url
+        self.episode_list_url = url
     
     def set_episode(self, episode: int):
         self.latest_episode = episode
     
-    def increase_episode(self, episode: int):
+    def increase_episode(self):
         self.latest_episode += 1
         
     def set_folder(self, folder: str):
         self.folder_name = folder
     
-    def set_emision_status(self, emision: bool):
+    def set_broadcasting(self, emision: bool):
         self.on_emission = emision
 
+    def set_download_id(self, id: int):
+        self.download_id =id
 
 class Updater():
     
-    def add_show (show: Show) -> None:
+    def add_show (self, show: Show) -> None:
         """
             Parameters:
             ----------
@@ -120,10 +122,10 @@ class Updater():
                         "current_episode": show.get_episode(), 
                         "list_url": show.get_list_url(),
                         "folder_name": show.get_folder(),
-                        "status": show.get_emision_status()
+                        "broadcasting": show.get_broadcasting()
                         })
     
-    def get_show (alias: str) -> Show:
+    def get_show (self, alias: str) -> Show:
         """
             Parameters:
             ----------
@@ -144,17 +146,21 @@ class Updater():
                     list_url = show_dict["list_url"],
                     episode_number = show_dict["current_episode"], 
                     folder = show_dict["folder_name"],
-                    emission = show_dict["status"])
+                    emission = show_dict["broadcasting"])
         return show
     
-    #! TO VALIDATE
-    def update_chapter(show: Show):
+    def update_chapters(self, show: Show):
+        """ 
+            Parameters:
+            --------
+                list[Show]
+                    a list of Show instances that are on emission.
+        """
         db_shows = TinyDB("show_db.json")
         data = Query()
         db_shows.update({"current_episode": show.get_episode()}, data.show == show.get_alias())
 
-
-    def all_emiting_shows () -> list:
+    def all_emiting_shows (self) -> list[Show]:
         """ 
             Returns:
             --------
@@ -167,8 +173,8 @@ class Updater():
         shows = []
     
         for element in list:
-            if element["status"] == "Broadcasting":
-                shows.append(Updater.get_show(element["show"]))
+            if element["broadcasting"] == True:
+                shows.append(self.get_show(element["show"]))
 
         return shows
                     
