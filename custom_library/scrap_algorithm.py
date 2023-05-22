@@ -99,7 +99,10 @@ class Episode_page(Scrap):
                     #Busca tabla de descargas
                     download_table = r.html.find("#DwsldCn",first = True)
                     # El .links regresa variable tipo "set"
-                    return list(download_table.links)
+                    down_list = list(download_table.links)
+                    if len(down_list) == 0:
+                        raise ConnectionRefusedError("Episode not available")
+                    return down_list
             except:
                 if i == self.get_attempts():
                     raise ConnectionError("Connection Failed")

@@ -37,7 +37,11 @@ for show in emiting_shows:
     
     # Create each episode_page instance
     show = updater.get_show(show.get_alias())
-    web_page = scrap.Episode_page(show)
+    try:
+        web_page = scrap.Episode_page(show)
+    except ConnectionRefusedError as ex:
+        print(f"{show.get_alias()} episode {show.get_episode()} not available")
+        continue
     
     # Execute manager.download_episodes()
     manager.add_links(web_page)
