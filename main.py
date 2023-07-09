@@ -1,5 +1,7 @@
 import custom_library.scrap_algorithm as scrap
 from custom_library.db_query import Save_path, Updater
+from platform import system
+from pathlib import Path
 
 #* SCAN AND DOWNLOAD SCRIPT
 save_path = Save_path("Shows")
@@ -13,6 +15,7 @@ for show in emiting_shows:
     
     #* ADD EPISODE_LINK INSTANCE
     # GETS THE LATEST EPISODE NUMBER AND CALCULATES THE URL OF IT
+    #! VALIDATE
     show.increase_episode()
     ep_url = show.get_list_url()
     
@@ -28,11 +31,14 @@ for show in emiting_shows:
     # SET SHOW´S SAVE PATH
     episode_save_path = f"{save_path.get_directory()}/{show.get_folder()}"
     
-    #! UNCOMMENT WHEN PASSED TO LINUX SERVER
-    #* AWARE OF SERVER´S FOLDER AND JDOWNLOADER PATHS
     
-    # if not episode_save_path.is_dir():
-    #     episode_save_path.mkdir()
+    #* AWARE OF SERVER´S FOLDER AND JDOWNLOADER PATHS
+    # CHECK OS AND FOLDER EXISTANCE
+    if system() == "Linux":
+        host_save_path = f"{save_path.get_host_directory()}/{show.get_folder()}"
+        temp_path = Path(host_save_path)
+        if not temp_path.exists():
+            temp_path.mkdir()
     
     
     # Create each episode_page instance

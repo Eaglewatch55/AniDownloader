@@ -10,12 +10,16 @@ class Save_path():
         data = Query()
         config = save_path_table.search(data.alias == alias)[0]
         self.directory_path = config["directory"]
+        self.host_path = config["host_directory"]
     
     def get_alias(self):
         return self.path_profile
     
     def get_directory(self):
         return self.directory_path
+    
+    def get_host_directory(self):
+        return self.host_path
     
     def __str__(self) -> str:
         return f"Alias: {self.get_alias()}\nDirectory: {self.get_directory()}\nTransmission: {self.get_transmission()}"

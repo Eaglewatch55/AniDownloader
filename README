@@ -1,0 +1,3 @@
+To execute scrpit execute "./automation_script"
+
+It will execute a bash script that will activate the virtual enviroment and then the python script.

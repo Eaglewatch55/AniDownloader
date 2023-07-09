@@ -241,11 +241,11 @@ class Jd_manager():
     def add_url(self, link, ep_name, folder) -> bool:
         linkgrab = myjdapi.myjdapi.Linkgrabber(self.device)
         
-        linkgrab.add_links([{"autostart": False,
+        linkgrab.add_links([{"autostart": True,
                       "links": link,
                       "packageName": ep_name,
                       "extractPassword": None,
-                      "priority": "DEFAULT",
+                      "priority": "HIGHEST",
                       "downloadPassword": None,
                       "destinationFolder": folder,
                       "overwritePackagizerRules": True
@@ -307,6 +307,10 @@ class Jd_manager():
 
         episodes_id = {}
         
+        # ADDED TO GUARANTEE FIRST PRIORITY DOWNLOADS
+        down_manager = myjdapi.myjdapi.DownloadController(self.device)
+        self.attempt(down_manager.stop_downloads, "Stopping Downloads")
+        
         # EPISODE´S DOWNLOAD SEQUENCE
         for episode in self.get_links():
             
@@ -328,6 +332,7 @@ class Jd_manager():
                 #ADDS AND CHECKS ONLINE STATUS OF EACH LINK AVAILABLE
                 for url in episode.get_download_links():
                     status = False
+                    
                     status, link_id, package_id = self.attempt(self.add_url, 
                                     f"Adding {episode.get_alias()}",
                                     url, 
@@ -335,6 +340,7 @@ class Jd_manager():
                                     directory_path,
                                     except_func=self.clear_jd,
                                     cleartype_links="DELETE_ALL")
+                    
                     if status:
                         print(f"Download added: {url}")
                         episodes_id[episode.get_alias()] = [link_id, episode.get_episode_num(), "Downloading"]
@@ -346,61 +352,66 @@ class Jd_manager():
         return episodes_id
         
     def download_validation(self, episode_dict: dict[list], default_time) -> dict[list]:
+        
+        down_manager = myjdapi.myjdapi.DownloadController(self.device)
+        self.attempt(down_manager.start_downloads, "Starting Downloads")
             
+        def get_dict_index(dict_list:dict[list], index:int) -> list:
+            """
+                Takes a dictionary with a list as value and returns a list 
+                of the given index of each list
+            """
             
-            def get_dict_index(dict_list:dict[list], index:int) -> list:
-                """
-                    Takes a dictionary with a list as value and returns a list 
-                    of the given index of each list
-                """
+            return_list = []
+            for key in dict_list.keys():
+                return_list.append(dict_list[key][index])
+            return return_list
+        
                 
-                return_list = []
-                for key in dict_list.keys():
-                    return_list.append(dict_list[key][index])
-                return return_list
+        print(f"Initiating {len(episode_dict)} downloads")
+        episodes_status = get_dict_index(episode_dict, 2)
+        
+        while any([True for i in episodes_status if i == "Downloading"]):
+            # Gets JDownloader´s Donwload tab URLs
+            down_list = self.attempt(self.get_download_links, "Getting download status")
+            max_eta = 0
             
-                    
-            print(f"Initiating {len(episode_dict)} downloads")
-            episodes_status = get_dict_index(episode_dict, 2)
+            if down_list is False:
+                self.attempt(self.reconnect, "Attempting to reconnect")
+                sleep(default_time)
+                continue
             
-            while any([True for i in episodes_status if i == "Downloading"]):
-                # Gets JDownloader´s Donwload tab URLs
-                down_list = self.attempt(self.get_download_links, "Getting download status")
-                max_eta = 0
+            for package in down_list:
+                # Checks each package for status finished
+                uuid = package.get("uuid")
                 
-                if down_list is False:
-                    self.attempt(self.reconnect, "Attempting to reconnect")
-                    sleep(default_time)
-                    continue
+                print(uuid)
+                print(f"Runing: {package.get('running')}")
+                print(f"Status: {package.get('status')}")
                 
-                for package in down_list:
-                    # Checks each package for status finished
-                    uuid = package.get("uuid")
-                    
-                    # print(uuid)
-                    # print(f"Runing: {package.get('running')}")
-                    # print(f"Status: {package.get('status')}")
-                    
-                    #Creates a tuple with status and name for validation of the current uuid.
-                    for episode in episode_dict.keys():
-                        if episode_dict[episode][0] == uuid:
-                            cond_uuid = (episode, True)
-                            break
-                    
-                    if cond_uuid[1] and package.get("bytesLoaded") == package.get("bytesTotal"):
-                        episode_dict[episode][2] = "Finished"
-                    
-                    # SET WAITING TIME GIVEN THE ESTIMATED TIME OF COMPLETION    
-                    elif package.get('speed') == 0:
-                        print(f"Donwload {uuid} paused")
-                        max_eta = max(default_time, max_eta)
+                #Creates a tuple with status and name for validation of the current uuid.
+                for episode in episode_dict.keys():
+                    if episode_dict[episode][0] == uuid:
+                        cond_uuid = (episode, True)
+                        break
                     else:
-                        max_eta = max(package.get("eta"), max_eta)
+                        cond_uuid = (episode, False)
+                
+                # package.get("bytesLoaded") == package.get("bytesTotal") and
+                if cond_uuid[1] and package.get('status') == "Finished":
+                    episode_dict[episode][2] = "Finished"
+                
+                # SET WAITING TIME GIVEN THE ESTIMATED TIME OF COMPLETION    
+                elif package.get('speed') == 0:
+                    print(f"Donwload {uuid} paused")
+                    max_eta = max(default_time, max_eta)
+                else:
+                    max_eta = max(package.get("eta"), max_eta)
 
-                    episodes_status = get_dict_index(episode_dict, 2)
+                episodes_status = get_dict_index(episode_dict, 2)
+                
+            if max_eta > 0:
+                print(f"ETA: {max_eta}")
+                sleep(max_eta)        
                     
-                    if max_eta > 0:
-                        print(f"ETA: {max_eta}")
-                        sleep(max_eta)        
-                        
-            return episode_dict
+        return episode_dict

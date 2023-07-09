@@ -9,17 +9,17 @@
         },
         "2": {
             "show": "One Piece",
-            "current_episode": 1062,
+            "current_episode": 1065,
             "list_url": "https://www3.animeflv.net/anime/one-piece-tv",
             "folder_name": "One Piece (1999)",
             "broadcasting": true
         },
         "3": {
             "show": "Bleach SK",
-            "current_episode": 13,
+            "current_episode": 14,
             "list_url": "https://www3.animeflv.net/anime/bleach-sennen-kessenhen",
             "folder_name": "Bleach Sennen Kessenhen (2022)",
-            "broadcasting": false
+            "broadcasting": true
         },
         "4": {
             "show": "Slime",
