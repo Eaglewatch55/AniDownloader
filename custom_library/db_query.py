@@ -1,7 +1,7 @@
 from tinydb import TinyDB, Query
 
 #* DB CONFIG OBJECTS
-class Save_path():
+class Save_path():  
     
     def __init__(self, alias: str) -> None:
         self.path_profile = alias

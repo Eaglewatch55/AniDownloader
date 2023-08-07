@@ -9,28 +9,28 @@ print(f"Descargando en {save_path.get_alias()}")
 updater = Updater()
 link_dict = {}
 manager = scrap.Jd_manager()
-emiting_shows = updater.all_emiting_shows()
+emiting_shows = {s: True for s in updater.all_emiting_shows()}
 
-for show in emiting_shows:
+for show in emiting_shows.keys():
     
     #* ADD EPISODE_LINK INSTANCE
     # GETS THE LATEST EPISODE NUMBER AND CALCULATES THE URL OF IT
-    #! VALIDATE
-    show.increase_episode()
     ep_url = show.get_list_url()
     
-    episode_page = scrap.Episode_page(show , 300, 3)
+    episode_page = scrap.Episode_page(show, 300, 3)
+    show.increase_episode()
     
     # VALIDATES THE WEBPAGE´S NEW EPISODE IS ONLINE
-    if not episode_page.ok():
+    if episode_page.ok():
+        print(f"{show.get_alias()} episode {show.get_episode()} available")
+        
+    else:
         print(f"{show.get_alias()} episode {show.get_episode()} not available")
+        emiting_shows[show] = False
         continue
     
-    print(f"{show.get_alias()} episode {show.get_episode()} available")
-    
-    # SET SHOW´S SAVE PATH
-    episode_save_path = f"{save_path.get_directory()}/{show.get_folder()}"
-    
+  # SET SHOW´S SAVE PATH
+    episode_save_path = f"{save_path.get_directory()}/{show.get_folder()}"     
     
     #* AWARE OF SERVER´S FOLDER AND JDOWNLOADER PATHS
     # CHECK OS AND FOLDER EXISTANCE
@@ -50,7 +50,8 @@ for show in emiting_shows:
         continue
     
     # Execute manager.download_episodes()
-    manager.add_links(web_page)
+    manager.add_links(web_page, episode_save_path)
+    
 
 # Add to downloads in JDownloader
 episdoes_ids = manager.download_episodes(episode_save_path)
@@ -58,12 +59,18 @@ episdoes_ids = manager.download_episodes(episode_save_path)
 # Wait and validate download
 episodes_ids = manager.download_validation(episdoes_ids, 20)
 
-manager.disconnect()
-
+try:
+    manager.disconnect()
+except:
+    print("Disconnection Failure")
+    
 #* Update show_db
-for show in emiting_shows:
-    print(show.get_alias())
-    if episdoes_ids[show.get_alias()][2] == "Finished":
-        updater.update_chapters(show)
-        print(f"Download of {show.get_alias()} completed")
+for show in emiting_shows.keys():
+    
+    if emiting_shows[show]:
+        print(show.get_alias())
+        
+        if episdoes_ids[show.get_alias()][2] == "Finished":
+            updater.update_chapters(show)
+            print(f"Download of {show.get_alias()} completed")
         

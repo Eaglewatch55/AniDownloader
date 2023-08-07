@@ -47,7 +47,8 @@ class Scrap():
             try:
                 with HTMLSession() as session:
                     r = session.get(self.get_url(),timeout=self.get_timeout())
-                return r.ok
+                    return True if r.ok else False
+                
             except:
                 if i == self.get_attempts():
                     raise ConnectionError("Connection Failed")
@@ -58,7 +59,7 @@ class Episode_page(Scrap):
         super().__init__(show.get_list_url(), timeout, attempts)
         self.name = show.get_alias()
         self.next_ep = show.get_episode() + 1
-        self.ep_link = self.get_url().replace("/anime/","/ver/")+ "-" + str(show.get_episode() + 1)
+        self.ep_link = self.get_url().replace("/anime/","/ver/")+ "-" + str(self.next_ep)
         self.list_downloads = self.scrap_links()
         self.broadcast_status = self.get_emision_status()
         
@@ -77,7 +78,28 @@ class Episode_page(Scrap):
     
     def get_download_links(self):
         return self.list_downloads
-        
+    
+    def get_download_folder(self):
+        return self.d_folder
+
+    def ok(self):
+        """
+            Returns:
+        --------
+            Bool
+                True if a web page is available, attempting to connect acording the attempt parameters.
+                False otherwise.
+        """
+        for i in range(self.get_attempts()):
+            try:
+                with HTMLSession() as session:
+                    r = session.get(self.get_episode_link(),timeout=self.get_timeout())
+                    return True if r.ok else False
+                
+            except:
+                if i == self.get_attempts():
+                    raise ConnectionError("Connection Failed")
+            
     def scrap_links(self) -> list:
         """
         Parameters:
@@ -143,7 +165,7 @@ class Episode_page(Scrap):
 class Jd_manager():
     def __init__(self, attempt_number = 3) -> None:
         self.config = Jd_config()
-        self.links = []
+        self.links = {}
         self.attempts = attempt_number
         
         self.jd = myjdapi.Myjdapi()
@@ -215,14 +237,15 @@ class Jd_manager():
         return False
     
     
-    def add_links(self, episode: Episode_page) -> None:
-        self.links.append(episode)
-    
+    def add_links(self, episode: Episode_page, save_folder) -> None:
+        self.links[episode] = save_folder
     
     def get_links(self) -> list[Episode_page]:
-        return self.links
+        return self.links.keys()
     
-    
+    def get_folder(self, episode):
+        return self.links.get(episode)
+        
     def get_download_links(self) -> list:
         downloads = myjdapi.myjdapi.Downloads(self.device)            
         return  downloads.query_links()
@@ -311,6 +334,7 @@ class Jd_manager():
         down_manager = myjdapi.myjdapi.DownloadController(self.device)
         self.attempt(down_manager.stop_downloads, "Stopping Downloads")
         
+        #! CHECK FOLDER ASIGNATION. ITS DOWNLOADING ALL EPISODES TO SAME FOLDER
         # EPISODE´S DOWNLOAD SEQUENCE
         for episode in self.get_links():
             
@@ -332,14 +356,19 @@ class Jd_manager():
                 #ADDS AND CHECKS ONLINE STATUS OF EACH LINK AVAILABLE
                 for url in episode.get_download_links():
                     status = False
-                    
-                    status, link_id, package_id = self.attempt(self.add_url, 
-                                    f"Adding {episode.get_alias()}",
-                                    url, 
-                                    f"E{episode.get_episode_num()}",
-                                    directory_path,
-                                    except_func=self.clear_jd,
-                                    cleartype_links="DELETE_ALL")
+
+                    try:
+                        status, link_id, package_id = self.attempt(self.add_url, 
+                                        f"Adding {episode.get_alias()}",
+                                        url, 
+                                        f"E{episode.get_episode_num()}",
+                                        self.get_folder(episode),
+                                        except_func=self.clear_jd,
+                                        cleartype_links="DELETE_ALL")
+                    # Cant add url error manager
+                    except TypeError:
+                        print("Fatal Error: Cannot add URL")
+                        exit()
                     
                     if status:
                         print(f"Download added: {url}")
@@ -385,9 +414,9 @@ class Jd_manager():
                 # Checks each package for status finished
                 uuid = package.get("uuid")
                 
-                print(uuid)
-                print(f"Runing: {package.get('running')}")
-                print(f"Status: {package.get('status')}")
+                #print(uuid)
+                # print(f"Runing: {package.get('running')}")
+                # print(f"Status: {package.get('status')}")
                 
                 #Creates a tuple with status and name for validation of the current uuid.
                 for episode in episode_dict.keys():
