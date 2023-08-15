@@ -1,0 +1,12 @@
+!bin/bash
+
+#Change to directoriy
+cd /portainer/int_ssd/Files/Scripts/AniDownloader
+
+# Activate virtual enviroment
+source ./venv/bin/activate
+
+# Execute python script
+python main.py
+
+
