@@ -51,11 +51,18 @@ for show in emiting_shows.keys():
     
     # Execute manager.download_episodes()
     manager.add_links(web_page, episode_save_path)
+
+if not any(emiting_shows.values()) is True:
+    print("No episodes available")
+    exit()
     
-
-# Add to downloads in JDownloader
-episdoes_ids = manager.download_episodes(episode_save_path)
-
+try:
+    # Add to downloads in JDownloader
+    episdoes_ids = manager.download_episodes(episode_save_path)
+except NameError as ex:
+    print(ex)
+    exit()
+    
 # Wait and validate download
 episodes_ids = manager.download_validation(episdoes_ids, 20)
 

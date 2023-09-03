@@ -171,10 +171,13 @@ class Jd_manager():
         self.jd = myjdapi.Myjdapi()
         self.jd.set_app_key("my_key")  
         
-        if self.attempt(self.jd.connect,"Connecting to JDownloader API", self.config.get_mail(), self.config.get_pass()):
-            self.device = self.jd.get_device(self.config.get_device_name())
-        else:
-            raise ConnectionError("Connection not available")
+        try:
+            if self.attempt(self.jd.connect,"Connecting to JDownloader API", self.config.get_mail(), self.config.get_pass()):
+                self.device = self.jd.get_device(self.config.get_device_name())
+        except myjdapi.exception.MYJDDeviceNotFoundException as ex:
+            print("JDownloader server not available")
+            print("Error: ", ex)
+            exit()
         
         # STARTUP CLEANING SEQUENCE
         self.attempt(self.clear_downloads, "Startup cleanning sequence")
