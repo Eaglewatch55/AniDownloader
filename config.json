@@ -1,0 +1,16 @@
+{
+    "save_path": {
+        "1": {
+            "alias": "Shows",
+            "directory": "/opt/Media/Shows",
+            "host_directory": "/portainer/int_ssd/Shows"
+        }
+    },
+    "jdownloader": {
+        "1": {
+            "mail": "eloy.gallardog@gmail.com",
+            "pass": "4LAd#xFQ2sy@",
+            "device_name": "pi-server"
+        }
+    }
+}
