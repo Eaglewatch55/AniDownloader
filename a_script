@@ -6,7 +6,8 @@ cd /portainer/int_ssd/Files/Scripts/AniDownloader
 # Activate virtual enviroment
 source ./venv/bin/activate
 
-# Execute python script
-python main.py
+# Execute and recive updates on python script
+exec = $(python main.py) && curl -d "AniDownloader results: $exec" http://pi-server/AniDownloader
+
 
 
