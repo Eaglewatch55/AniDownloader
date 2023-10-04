@@ -236,7 +236,7 @@ class Jd_manager():
                 if except_func is not False:
                     self.attempt(except_func, "Exception handling", kwargs.values())
                     sleep(1)
-                print(f"Attempt {i + 1} failed")
+                #print(f"Attempt {i + 1} failed")
         return False
     
     
@@ -294,7 +294,7 @@ class Jd_manager():
             return True, link_id, package_id
         
         else:
-            print(f"Offline link: {link}")
+            #print(f"Offline link: {link}")
             while linkgrab.get_package_count() > 0:
                 # sleep(2)
                 linkgrab.remove_links([grabber_links[0]["uuid"]] )
@@ -374,7 +374,7 @@ class Jd_manager():
                         exit()
                     
                     if status:
-                        print(f"Download added: {url}")
+                        #print(f"Download added: {url}")
                         episodes_id[episode.get_alias()] = [link_id, episode.get_episode_num(), "Downloading"]
                         sleep(1)
                         break   #ADDS ONLY THE FIRST AVAILABLE LINK TO DOWNLOAD
@@ -400,7 +400,7 @@ class Jd_manager():
             return return_list
         
                 
-        print(f"Initiating {len(episode_dict)} downloads")
+        #print(f"Initiating {len(episode_dict)} downloads")
         episodes_status = get_dict_index(episode_dict, 2)
         
         while any([True for i in episodes_status if i == "Downloading"]):
@@ -435,7 +435,7 @@ class Jd_manager():
                 
                 # SET WAITING TIME GIVEN THE ESTIMATED TIME OF COMPLETION    
                 elif package.get('speed') == 0:
-                    print(f"Donwload {uuid} paused")
+                    #print(f"Donwload {uuid} paused")
                     max_eta = max(default_time, max_eta)
                 else:
                     max_eta = max(package.get("eta"), max_eta)
@@ -443,7 +443,7 @@ class Jd_manager():
                 episodes_status = get_dict_index(episode_dict, 2)
                 
             if max_eta > 0:
-                print(f"ETA: {max_eta}")
+                #print(f"ETA: {max_eta}")
                 sleep(max_eta)        
                     
         return episode_dict

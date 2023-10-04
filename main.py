@@ -25,7 +25,7 @@ for show in emiting_shows.keys():
         print(f"{show.get_alias()} episode {show.get_episode()} available")
         
     else:
-        print(f"{show.get_alias()} episode {show.get_episode()} not available")
+        #print(f"{show.get_alias()} episode {show.get_episode()} not available")
         emiting_shows[show] = False
         continue
     
@@ -46,14 +46,14 @@ for show in emiting_shows.keys():
     try:
         web_page = scrap.Episode_page(show)
     except ConnectionRefusedError as ex:
-        print(f"{show.get_alias()} episode {show.get_episode()} not available")
+        #print(f"{show.get_alias()} episode {show.get_episode()} not available")
         continue
     
     # Execute manager.download_episodes()
     manager.add_links(web_page, episode_save_path)
 
 if not any(emiting_shows.values()) is True:
-    print("No episodes available")
+    #print("No episodes available")
     exit()
     
 try:
@@ -69,13 +69,13 @@ episodes_ids = manager.download_validation(episdoes_ids, 20)
 try:
     manager.disconnect()
 except:
-    print("Disconnection Failure")
+    print("Connection Failure")
     
 #* Update show_db
 for show in emiting_shows.keys():
     
     if emiting_shows[show]:
-        print(show.get_alias())
+        #print(show.get_alias())
         
         if episdoes_ids[show.get_alias()][2] == "Finished":
             updater.update_chapters(show)
